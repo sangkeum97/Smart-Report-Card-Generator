@@ -1,4 +1,4 @@
-import React, { useState, ErrorInfo, ReactNode, useRef } from 'react';
+import React, { Component, useState, ErrorInfo, ReactNode, useRef } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
@@ -14,7 +14,7 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary Component to catch crashes
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null
