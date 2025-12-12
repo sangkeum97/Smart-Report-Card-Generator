@@ -6,7 +6,6 @@ import { Sparkles, Loader2, Plus, Trash2, Upload, FileImage, MessageSquarePlus, 
 interface ReportFormProps {
   data: ReportData;
   onChange: (data: ReportData) => void;
-  apiKey: string;
 }
 
 // Reusable Stepper Component
@@ -84,7 +83,7 @@ const AutoResizeTextarea = ({
   );
 };
 
-const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
+const ReportForm: React.FC<ReportFormProps> = ({ data, onChange }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [analyzingFileName, setAnalyzingFileName] = useState("");
@@ -110,10 +109,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
 
   // 1. Text-based AI Analysis
   const handleAIAnalysis = async () => {
-    if (!apiKey) {
-      alert("API Key가 필요합니다. 설정에서 키를 입력해주세요.");
-      return;
-    }
     setIsGenerating(true);
     try {
       const analysis = await generateReportAnalysis({
@@ -124,7 +119,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
         questionTypeStats: data.questionTypeStats,
         radarStats: data.radarStats,
         incorrectAnswers: data.incorrectAnswers
-      }, apiKey);
+      });
       
       onChange({
         ...data,
@@ -136,7 +131,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
         parentMessage: analysis.parentMessage || data.parentMessage
       });
     } catch (error) {
-      alert("AI 분석 중 오류가 발생했습니다. API Key를 확인해주세요.");
+      alert("AI 분석 중 오류가 발생했습니다. 환경변수 API Key를 확인해주세요.");
     } finally {
       setIsGenerating(false);
     }
@@ -144,11 +139,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
 
   // Shared file processing logic
   const processFile = async (file: File) => {
-    if (!apiKey) {
-      alert("API Key가 필요합니다. 설정에서 키를 입력해주세요.");
-      return;
-    }
-
     setIsAnalyzingImage(true);
     setAnalyzingFileName(file.name);
     
@@ -181,7 +171,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, apiKey }) => {
 
       const { base64Data, mimeType } = await readPromise;
 
-      const result = await analyzeExamFromImage(base64Data, mimeType, examContext, apiKey);
+      const result = await analyzeExamFromImage(base64Data, mimeType, examContext);
       
       onChange({
         ...data,

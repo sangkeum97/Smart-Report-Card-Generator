@@ -1,74 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
-import { GraduationCap, RotateCcw, UserPlus, Key, Settings } from 'lucide-react';
+import { GraduationCap, RotateCcw, UserPlus } from 'lucide-react';
 
-// 안전한 환경 변수 가져오기 함수 (import.meta 제거하여 호환성 확보)
-const getEnvKey = () => {
-  try {
-    // 표준 process.env 체크 (CRA, Next.js, Webpack 등 대부분 지원)
-    if (typeof process !== 'undefined' && process.env) {
-      // 다양한 환경 변수 네이밍 패턴 지원
-      return process.env.API_KEY || 
-             process.env.REACT_APP_API_KEY || 
-             process.env.VITE_API_KEY || 
-             '';
-    }
-  } catch (e) {
-    // process 접근 실패 시 무시
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Error Boundary Component to catch crashes
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
   }
-  return '';
-};
 
-function App() {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+          <div className="bg-white p-8 rounded-xl shadow-xl max-w-lg w-full border border-red-200">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">오류가 발생했습니다</h1>
+            <p className="text-slate-600 mb-4">프로그램을 실행하는 도중 문제가 발생했습니다.</p>
+            <div className="bg-slate-100 p-4 rounded text-xs font-mono text-slate-700 overflow-auto mb-6">
+              {this.state.error?.message || "알 수 없는 오류"}
+            </div>
+            <button 
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-colors"
+            >
+              데이터 초기화 및 새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function AppContent() {
   const [reportData, setReportData] = useState<ReportData>(INITIAL_DATA);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
   
-  // API Key State
-  const [apiKey, setApiKey] = useState<string>('');
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [tempApiKey, setTempApiKey] = useState('');
-  const [isEnvKeyAvailable, setIsEnvKeyAvailable] = useState(false);
-
-  // Initial load of API Key
-  useEffect(() => {
-    const envKey = getEnvKey();
-
-    if (envKey) {
-      setApiKey(envKey);
-      setIsEnvKeyAvailable(true);
-    } else {
-      // 환경 변수가 없으면 로컬 스토리지 확인
-      const storedKey = localStorage.getItem('GEMINI_API_KEY');
-      if (storedKey) {
-        setApiKey(storedKey);
-      } else {
-        // 키가 없으면 모달 열기
-        setIsApiKeyModalOpen(true);
-      }
-    }
-  }, []);
-
-  const handleSaveApiKey = () => {
-    if (tempApiKey.trim()) {
-      localStorage.setItem('GEMINI_API_KEY', tempApiKey.trim());
-      setApiKey(tempApiKey.trim());
-      setIsApiKeyModalOpen(false);
-    } else {
-      alert("API Key를 입력해주세요.");
-    }
-  };
-
-  const handleClearApiKey = () => {
-    if (confirm("저장된 API Key를 삭제하시겠습니까?")) {
-      localStorage.removeItem('GEMINI_API_KEY');
-      setApiKey('');
-      setTempApiKey('');
-      setIsApiKeyModalOpen(true);
-    }
-  };
-
   const handleReset = () => {
     if (confirm("모든 데이터를 초기화하고 새로운 리포트를 작성하시겠습니까?")) {
       setReportData(INITIAL_DATA);
@@ -88,7 +79,7 @@ function App() {
           weaknesses: [],
           parentMessage: "내용을 생성하거나 입력해주세요.",
           incorrectAnswers: [],
-          // Reset earned scores but keep structure
+          // Reset earned scores but keep structure (Metadata preserved)
           difficultyStats: prev.difficultyStats.map(s => ({ ...s, correct: 0 })),
           questionTypeStats: prev.questionTypeStats.map(s => ({ ...s, correct: 0 })),
           assessmentStats: prev.assessmentStats.map(s => ({ ...s, earnedScore: 0 })),
@@ -111,16 +102,6 @@ function App() {
             </div>
           </div>
           <div className="flex gap-2 items-center">
-             <button 
-                onClick={() => { setTempApiKey(apiKey); setIsApiKeyModalOpen(true); }}
-                className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white text-xs transition-colors"
-                title="API Key 설정"
-             >
-                <Settings size={14} /> <span className="hidden md:inline">API 설정</span>
-             </button>
-
-             <div className="w-px h-4 bg-slate-700 mx-1"></div>
-
              <button onClick={handleNextStudent} className="flex items-center gap-1 px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white text-sm rounded-md transition-colors" title="시험 정보 유지, 학생 정보 초기화">
                <UserPlus size={14} /> <span className="hidden md:inline">다음 학생</span>
              </button>
@@ -141,7 +122,7 @@ function App() {
         <div className={`max-w-[1600px] mx-auto h-full grid gap-6 ${viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'}`}>
           {/* Editor */}
           <div className={`${viewMode === 'split' ? 'lg:col-span-4' : 'hidden'} h-full`}>
-            <ReportForm data={reportData} onChange={setReportData} apiKey={apiKey} />
+            <ReportForm data={reportData} onChange={setReportData} />
           </div>
           {/* Preview */}
           <div className={`${viewMode === 'split' ? 'lg:col-span-8' : 'w-full max-w-4xl mx-auto'} h-full overflow-y-auto`}>
@@ -149,57 +130,14 @@ function App() {
           </div>
         </div>
       </main>
-
-      {/* API Key Modal */}
-      {isApiKeyModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in duration-200">
-             <div className="flex items-center gap-3 mb-4">
-                <div className="bg-blue-100 p-2 rounded-full text-blue-600">
-                  <Key size={24} />
-                </div>
-                <h2 className="text-xl font-bold text-slate-800">Google Gemini API Key 설정</h2>
-             </div>
-             
-             <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-               AI 기능을 사용하기 위해 API Key가 필요합니다.<br/>
-               <span className="text-xs text-slate-400">* 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.</span>
-             </p>
-
-             <input 
-               type="password"
-               placeholder="AI Studio API Key 입력"
-               value={tempApiKey}
-               onChange={(e) => setTempApiKey(e.target.value)}
-               className="w-full p-3 border border-slate-300 rounded-lg text-sm mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-             />
-
-             <div className="flex justify-between gap-3">
-                {apiKey && !isEnvKeyAvailable && (
-                  <button onClick={handleClearApiKey} className="text-red-500 text-sm font-medium hover:bg-red-50 px-3 py-2 rounded">
-                    키 삭제
-                  </button>
-                )}
-                <div className="flex gap-2 ml-auto">
-                   {apiKey && (
-                     <button onClick={() => setIsApiKeyModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium">
-                       닫기
-                     </button>
-                   )}
-                   <button onClick={handleSaveApiKey} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
-                     저장 및 시작
-                   </button>
-                </div>
-             </div>
-             
-             <div className="mt-4 pt-4 border-t text-xs text-slate-400">
-               <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline hover:text-blue-500">API Key 발급받기 (Google AI Studio)</a>
-             </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}

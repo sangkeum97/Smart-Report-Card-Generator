@@ -1,9 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { ReportData } from "../types";
 
-// Helper to get AI instance dynamically
-const getAI = (apiKey: string) => new GoogleGenAI({ apiKey });
-
 const reportSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -97,11 +94,11 @@ const reportSchema: Schema = {
   }
 };
 
-export async function generateReportAnalysis(data: Partial<ReportData>, apiKey: string): Promise<Partial<ReportData>> {
-  if (!apiKey) throw new Error("API Key is missing");
+export async function generateReportAnalysis(data: Partial<ReportData>): Promise<Partial<ReportData>> {
+  if (!process.env.API_KEY) throw new Error("API Key is missing in environment variables");
   
   try {
-    const ai = getAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `
       You are an expert academic advisor. Generate a detailed student report card analysis based on the provided data.
       The output must be in Korean.
@@ -141,11 +138,11 @@ export async function generateReportAnalysis(data: Partial<ReportData>, apiKey: 
   }
 }
 
-export async function analyzeExamFromImage(base64Image: string, mimeType: string, context: string = "", apiKey: string): Promise<Partial<ReportData>> {
-  if (!apiKey) throw new Error("API Key is missing");
+export async function analyzeExamFromImage(base64Image: string, mimeType: string, context: string = ""): Promise<Partial<ReportData>> {
+  if (!process.env.API_KEY) throw new Error("API Key is missing in environment variables");
 
   try {
-    const ai = getAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `
       Analyze this exam paper (image or document) and generate a structured report.
       The output must be in Korean.
