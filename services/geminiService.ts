@@ -94,11 +94,25 @@ const reportSchema: Schema = {
   }
 };
 
+// Helper to safely get API Key
+const getApiKey = () => {
+  try {
+    // Check if process exists and has env (Node/Webpack style)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore ReferenceError if process is not defined
+  }
+  return "";
+};
+
 export async function generateReportAnalysis(data: Partial<ReportData>): Promise<Partial<ReportData>> {
-  if (!process.env.API_KEY) throw new Error("API Key is missing in environment variables");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key is missing in environment variables");
   
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `
       You are an expert academic advisor. Generate a detailed student report card analysis based on the provided data.
       The output must be in Korean.
@@ -139,10 +153,11 @@ export async function generateReportAnalysis(data: Partial<ReportData>): Promise
 }
 
 export async function analyzeExamFromImage(base64Image: string, mimeType: string, context: string = ""): Promise<Partial<ReportData>> {
-  if (!process.env.API_KEY) throw new Error("API Key is missing in environment variables");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key is missing in environment variables");
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `
       Analyze this exam paper (image or document) and generate a structured report.
       The output must be in Korean.
