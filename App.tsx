@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
 import { GraduationCap, RotateCcw, UserPlus } from 'lucide-react';
 
 interface ErrorBoundaryProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -14,17 +14,20 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary Component to catch crashes
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = {
-    hasError: false,
-    error: null
-  };
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
@@ -63,6 +66,7 @@ function AppContent() {
   const handleReset = () => {
     if (confirm("모든 데이터를 초기화하고 새로운 리포트를 작성하시겠습니까?")) {
       setReportData(INITIAL_DATA);
+      setViewMode('split'); // Force view to split so user can edit
       window.scrollTo(0,0);
     }
   };
@@ -85,6 +89,7 @@ function AppContent() {
           assessmentStats: prev.assessmentStats.map(s => ({ ...s, earnedScore: 0 })),
           radarStats: prev.radarStats.map(s => ({ ...s, student: 0 }))
        }));
+       setViewMode('split'); // Force view to split so user can edit
        window.scrollTo(0,0);
      }
   };
