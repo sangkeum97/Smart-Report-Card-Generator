@@ -4,30 +4,6 @@ import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
 import { GraduationCap, RotateCcw, UserPlus, Key, Settings } from 'lucide-react';
 
-// Fix: Helper function moved out of useEffect to be accessible in render scope
-const getEnvKey = () => {
-  try {
-    // 1. Check Vite (import.meta.env)
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-       // @ts-ignore
-       if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
-       // @ts-ignore
-       if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
-    }
-  } catch (e) {}
-
-  try {
-    // 2. Check Process Env (Webpack/CRA/Node)
-    if (typeof process !== 'undefined' && process.env) {
-      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
-      if (process.env.API_KEY) return process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  return '';
-};
-
 function App() {
   const [reportData, setReportData] = useState<ReportData>(INITIAL_DATA);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
@@ -36,24 +12,64 @@ function App() {
   const [apiKey, setApiKey] = useState<string>('');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
+  const [isEnvKeyAvailable, setIsEnvKeyAvailable] = useState(false);
 
   // Initial load of API Key
   useEffect(() => {
-    const envKey = getEnvKey();
+    let foundKey = '';
+    let fromEnv = false;
 
-    // 1. Prioritize Environment Variable (for owner's convenience)
-    if (envKey) {
-      setApiKey(envKey);
-      return;
+    // 1. Safe check for process.env (Common in most build tools)
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        if (process.env.API_KEY) {
+          foundKey = process.env.API_KEY;
+          fromEnv = true;
+        } else if (process.env.REACT_APP_API_KEY) {
+           foundKey = process.env.REACT_APP_API_KEY;
+           fromEnv = true;
+        }
+      }
+    } catch (e) {
+      console.warn("process.env access failed", e);
     }
 
-    // 2. Check LocalStorage (for returning visitors)
-    const storedKey = localStorage.getItem('GEMINI_API_KEY');
-    if (storedKey) {
-      setApiKey(storedKey);
+    // 2. Safe check for Vite import.meta.env
+    // Wrapped in try-catch and checking typeof to avoid ReferenceErrors/SyntaxErrors in some environments
+    if (!foundKey) {
+      try {
+        // @ts-ignore
+        if (typeof import.meta !== 'undefined' && import.meta.env) {
+           // @ts-ignore
+           if (import.meta.env.VITE_API_KEY) {
+             // @ts-ignore
+             foundKey = import.meta.env.VITE_API_KEY;
+             fromEnv = true;
+           }
+           // @ts-ignore
+           else if (import.meta.env.API_KEY) {
+             // @ts-ignore
+             foundKey = import.meta.env.API_KEY;
+             fromEnv = true;
+           }
+        }
+      } catch (e) {
+        console.warn("import.meta access failed", e);
+      }
+    }
+
+    setIsEnvKeyAvailable(fromEnv);
+
+    if (foundKey) {
+      setApiKey(foundKey);
     } else {
-      // 3. If neither, prompt user
-      setIsApiKeyModalOpen(true);
+      // 3. Check LocalStorage
+      const storedKey = localStorage.getItem('GEMINI_API_KEY');
+      if (storedKey) {
+        setApiKey(storedKey);
+      } else {
+        setIsApiKeyModalOpen(true);
+      }
     }
   }, []);
 
@@ -182,7 +198,7 @@ function App() {
              />
 
              <div className="flex justify-between gap-3">
-                {apiKey && !getEnvKey() && (
+                {apiKey && !isEnvKeyAvailable && (
                   <button onClick={handleClearApiKey} className="text-red-500 text-sm font-medium hover:bg-red-50 px-3 py-2 rounded">
                     키 삭제
                   </button>
