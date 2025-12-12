@@ -4,6 +4,23 @@ import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
 import { GraduationCap, RotateCcw, UserPlus, Key, Settings } from 'lucide-react';
 
+// 안전한 환경 변수 가져오기 함수 (import.meta 제거하여 호환성 확보)
+const getEnvKey = () => {
+  try {
+    // 표준 process.env 체크 (CRA, Next.js, Webpack 등 대부분 지원)
+    if (typeof process !== 'undefined' && process.env) {
+      // 다양한 환경 변수 네이밍 패턴 지원
+      return process.env.API_KEY || 
+             process.env.REACT_APP_API_KEY || 
+             process.env.VITE_API_KEY || 
+             '';
+    }
+  } catch (e) {
+    // process 접근 실패 시 무시
+  }
+  return '';
+};
+
 function App() {
   const [reportData, setReportData] = useState<ReportData>(INITIAL_DATA);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
@@ -16,58 +33,18 @@ function App() {
 
   // Initial load of API Key
   useEffect(() => {
-    let foundKey = '';
-    let fromEnv = false;
+    const envKey = getEnvKey();
 
-    // 1. Safe check for process.env (Common in most build tools)
-    try {
-      if (typeof process !== 'undefined' && process.env) {
-        if (process.env.API_KEY) {
-          foundKey = process.env.API_KEY;
-          fromEnv = true;
-        } else if (process.env.REACT_APP_API_KEY) {
-           foundKey = process.env.REACT_APP_API_KEY;
-           fromEnv = true;
-        }
-      }
-    } catch (e) {
-      console.warn("process.env access failed", e);
-    }
-
-    // 2. Safe check for Vite import.meta.env
-    // Wrapped in try-catch and checking typeof to avoid ReferenceErrors/SyntaxErrors in some environments
-    if (!foundKey) {
-      try {
-        // @ts-ignore
-        if (typeof import.meta !== 'undefined' && import.meta.env) {
-           // @ts-ignore
-           if (import.meta.env.VITE_API_KEY) {
-             // @ts-ignore
-             foundKey = import.meta.env.VITE_API_KEY;
-             fromEnv = true;
-           }
-           // @ts-ignore
-           else if (import.meta.env.API_KEY) {
-             // @ts-ignore
-             foundKey = import.meta.env.API_KEY;
-             fromEnv = true;
-           }
-        }
-      } catch (e) {
-        console.warn("import.meta access failed", e);
-      }
-    }
-
-    setIsEnvKeyAvailable(fromEnv);
-
-    if (foundKey) {
-      setApiKey(foundKey);
+    if (envKey) {
+      setApiKey(envKey);
+      setIsEnvKeyAvailable(true);
     } else {
-      // 3. Check LocalStorage
+      // 환경 변수가 없으면 로컬 스토리지 확인
       const storedKey = localStorage.getItem('GEMINI_API_KEY');
       if (storedKey) {
         setApiKey(storedKey);
       } else {
+        // 키가 없으면 모달 열기
         setIsApiKeyModalOpen(true);
       }
     }
