@@ -1,8 +1,8 @@
-import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, ErrorInfo, ReactNode, useRef } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
-import { GraduationCap, RotateCcw, UserPlus } from 'lucide-react';
+import { GraduationCap, RotateCcw, UserPlus, Download, Upload } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -14,7 +14,7 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary Component to catch crashes
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -62,6 +62,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 function AppContent() {
   const [reportData, setReportData] = useState<ReportData>(INITIAL_DATA);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleReset = () => {
     if (confirm("모든 데이터를 초기화하고 새로운 리포트를 작성하시겠습니까?")) {
@@ -94,24 +95,83 @@ function AppContent() {
      }
   };
 
+  const handleExportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `${reportData.studentName || "학생"}_성적데이터.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        // Simple validation check
+        if (json.examTitle !== undefined && json.score !== undefined) {
+          setReportData(json);
+          setViewMode('split');
+          alert("데이터를 성공적으로 불러왔습니다.");
+        } else {
+          alert("올바르지 않은 데이터 형식입니다.");
+        }
+      } catch (error) {
+        alert("파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset value to allow re-uploading same file
+    event.target.value = ''; 
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
       <header className="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <GraduationCap className="text-blue-400" size={28} />
             <div>
               <h1 className="font-bold text-lg leading-tight">Smart Report Gen</h1>
               <p className="text-xs text-slate-400">AI 성적 분석 리포트</p>
             </div>
           </div>
-          <div className="flex gap-2 items-center">
+          
+          <div className="flex gap-2 items-center flex-wrap justify-center w-full md:w-auto">
+             {/* Data Management Buttons */}
+             <div className="flex gap-1 bg-slate-800 p-1 rounded-lg mr-2">
+                <button 
+                  onClick={handleExportData} 
+                  className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors text-sm"
+                  title="현재 데이터 저장 (JSON)"
+                >
+                  <Download size={14} /> <span className="hidden sm:inline">저장</span>
+                </button>
+                <label className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors text-sm cursor-pointer" title="데이터 불러오기 (JSON)">
+                  <Upload size={14} /> <span className="hidden sm:inline">불러오기</span>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleImportData}
+                    accept=".json"
+                    className="hidden" 
+                  />
+                </label>
+             </div>
+
+             <div className="h-6 w-px bg-slate-700 mx-1 hidden md:block"></div>
+
              <button onClick={handleNextStudent} className="flex items-center gap-1 px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white text-sm rounded-md transition-colors" title="시험 정보 유지, 학생 정보 초기화">
-               <UserPlus size={14} /> <span className="hidden md:inline">다음 학생</span>
+               <UserPlus size={14} /> <span className="hidden sm:inline">다음 학생</span>
              </button>
              <button onClick={handleReset} className="flex items-center gap-1 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-sm rounded-md transition-colors">
-               <RotateCcw size={14} /> <span className="hidden md:inline">초기화</span>
+               <RotateCcw size={14} /> <span className="hidden sm:inline">초기화</span>
              </button>
              
              <div className="hidden md:flex gap-1 bg-slate-800 p-1 rounded-lg ml-2">
