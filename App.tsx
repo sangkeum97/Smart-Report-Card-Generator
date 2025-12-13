@@ -1,8 +1,8 @@
-import React, { useState, ErrorInfo, ReactNode, useRef } from 'react';
+import React, { Component, useState, ErrorInfo, ReactNode, useRef } from 'react';
 import ReportForm from './components/ReportForm';
 import ReportPreview from './components/ReportPreview';
 import { ReportData, INITIAL_DATA } from './types';
-import { GraduationCap, RotateCcw, UserPlus, Download, Upload } from 'lucide-react';
+import { GraduationCap, RotateCcw, UserPlus, Download, Upload, FilePlus } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -14,14 +14,11 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary Component to catch crashes
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null
-    };
-  }
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = {
+    hasError: false,
+    error: null
+  };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -65,7 +62,7 @@ function AppContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleReset = () => {
-    if (confirm("모든 데이터를 초기화하고 새로운 리포트를 작성하시겠습니까?")) {
+    if (confirm("완전히 새로운 시험지를 작성하시겠습니까?\n모든 데이터가 초기화됩니다.")) {
       setReportData(INITIAL_DATA);
       setViewMode('split'); // Force view to split so user can edit
       window.scrollTo(0,0);
@@ -73,7 +70,7 @@ function AppContent() {
   };
 
   const handleNextStudent = () => {
-     if (confirm("시험 정보(난이도, 단원 등)는 유지하고\n학생별 점수와 분석 내용만 초기화하시겠습니까?")) {
+     if (confirm("현재 시험 정보(난이도, 단원 등)는 유지하고\n새로운 학생의 성적을 입력하시겠습니까?")) {
        setReportData(prev => ({
           ...prev,
           studentName: "",
@@ -99,7 +96,7 @@ function AppContent() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `${reportData.studentName || "학생"}_성적데이터.json`);
+    downloadAnchorNode.setAttribute("download", `${reportData.studentName || "학생"}_${reportData.examTitle || "시험"}_데이터.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -117,7 +114,7 @@ function AppContent() {
         if (json.examTitle !== undefined && json.score !== undefined) {
           setReportData(json);
           setViewMode('split');
-          alert("데이터를 성공적으로 불러왔습니다.");
+          alert("저장된 데이터를 성공적으로 불러왔습니다.");
         } else {
           alert("올바르지 않은 데이터 형식입니다.");
         }
@@ -144,16 +141,16 @@ function AppContent() {
           </div>
           
           <div className="flex gap-2 items-center flex-wrap justify-center w-full md:w-auto">
-             {/* Data Management Buttons */}
+             {/* Data Management Buttons - "중간 수정 저장/불러오기" */}
              <div className="flex gap-1 bg-slate-800 p-1 rounded-lg mr-2">
                 <button 
                   onClick={handleExportData} 
                   className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors text-sm"
-                  title="현재 데이터 저장 (JSON)"
+                  title="현재 작성중인 내용 저장 (JSON)"
                 >
-                  <Download size={14} /> <span className="hidden sm:inline">저장</span>
+                  <Download size={14} /> <span className="hidden sm:inline">임시저장</span>
                 </button>
-                <label className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors text-sm cursor-pointer" title="데이터 불러오기 (JSON)">
+                <label className="flex items-center gap-1 px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors text-sm cursor-pointer" title="저장된 내용 불러오기">
                   <Upload size={14} /> <span className="hidden sm:inline">불러오기</span>
                   <input 
                     type="file" 
@@ -167,11 +164,12 @@ function AppContent() {
 
              <div className="h-6 w-px bg-slate-700 mx-1 hidden md:block"></div>
 
+             {/* Workflow Buttons - "여러 학생", "다른 시험지" */}
              <button onClick={handleNextStudent} className="flex items-center gap-1 px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white text-sm rounded-md transition-colors" title="시험 정보 유지, 학생 정보 초기화">
-               <UserPlus size={14} /> <span className="hidden sm:inline">다음 학생</span>
+               <UserPlus size={14} /> <span className="hidden sm:inline">다음 학생 (동일 시험)</span>
              </button>
-             <button onClick={handleReset} className="flex items-center gap-1 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-sm rounded-md transition-colors">
-               <RotateCcw size={14} /> <span className="hidden sm:inline">초기화</span>
+             <button onClick={handleReset} className="flex items-center gap-1 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-sm rounded-md transition-colors" title="모든 데이터 초기화">
+               <FilePlus size={14} /> <span className="hidden sm:inline">새 시험지 (초기화)</span>
              </button>
              
              <div className="hidden md:flex gap-1 bg-slate-800 p-1 rounded-lg ml-2">
